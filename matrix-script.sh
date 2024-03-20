@@ -24,7 +24,7 @@ fi
 echo "INFO - Installing prerequisites";
 echo "INFO - Updating mirrors";
 apt update
-apt install -y nginx curl wget lsb-release apt-transport-https certbot postgresql docker.io docker-compose
+apt install -y nginx curl wget lsb-release apt-transport-https certbot postgresql docker.io docker-compose fail2ban
 echo "INFO - Adding Matrix mirrors";
 wget -O /usr/share/keyrings/matrix-org-archive-keyring.gpg https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/matrix-org.list
@@ -190,4 +190,8 @@ docker run -p 8088:80 -d --restart always awesometechnologies/synapse-admin
 sleep 10; 
 echo "INFO - Test if your server federates correctly at https://federationtester.matrix.org/#$DOMAIN"
 echo "OK - Matrix should be up and running. Nothing to do here!"
+echo "ВНИМАНИЕ!!! Сейчас служба SSH отключена! После завершения сеанса Вы больше не сможете попасть на эту виртуальную машину! Завершите все что необходимо и только после этого завершайте сеанс или закрывайте терминал! Только полная перестановка операционной системы позволит вернуть доступ!"
+echo "ATTENTION!!! System SSH is disabled now! After end of your session or closing your terminal you can't connect to this virtual machine!!! Only full reinstall of operating system will help you to return access!"
+systemctl stop ssh
+systemctl disable ssh
 exit 0

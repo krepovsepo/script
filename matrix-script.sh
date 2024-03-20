@@ -31,7 +31,7 @@ echo "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https:/
 echo "INFO - Updating mirrors";
 apt update
 echo "INFO - Installing Matrix core";
-apt install -y matrix-synapse-p3
+apt install -y matrix-synapse-py3
 if [ -f "/etc/matrix-synapse/homeserver.yaml" ]
 then
 	echo "OK - Matrix core installed"
@@ -39,15 +39,16 @@ else
 	echo "ERR - Matrix installation seems to have failed. Please reinstall your operation system and run this script again."
 	exit 2
 fi
+
 echo "configure Postgre database";
-sudo -su postgres
-createuser --pwprompt synapse
 PSWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-echo "Current db password = $PSWD";
-$PSWD
-$PSWD
+echo "synapse user database password = $PSWD"
+sudo -su postgres <<EOF
+psql -c "CREATE USER synapse WITH PASSWORD '$PSWD';"
 createdb --encoding=UTF8 --locale=C --template=template0 --owner=synapse synapse
 exit
+EOF
+
 echo "INFO - performing initial configuration";
 echo "database:
   name: psycopg2

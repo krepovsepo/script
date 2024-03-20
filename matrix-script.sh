@@ -70,7 +70,7 @@ then
     echo "INFO - fetching certificate"
 	DOMAIN=$(tail -n1 /etc/matrix-synapse/conf.d/server_name.yaml | cut -f2 -d":" | sed 's/ //g')
 	systemctl stop nginx
-	certbot certonly --standalone -d $DOMAIN -d matrix.$DOMAIN -d element.$DOMAIN --agree-tos -n -m webmaster@$DOMAIN
+	certbot certonly --standalone -d $DOMAIN -d matrix.$DOMAIN -d root.$DOMAIN --agree-tos -n -m webmaster@$DOMAIN
 	systemctl start nginx
 	if [ -f "/etc/letsencrypt/live/$DOMAIN/cert.pem" ]
 then
@@ -92,6 +92,12 @@ echo "INFO - Setting up virtual hosts in nginx";
 echo "server {
         listen 80;
         server_name $DOMAIN;
+        return 301 https://\$host\$request_uri;
+}
+
+server {
+        listen 80;
+        server_name root.$DOMAIN;
         return 301 https://\$host\$request_uri;
 }
 
@@ -123,6 +129,23 @@ server {
                 return 200 '{\"m.homeserver\": {\"base_url\": \"https://$DOMAIN\"},\"m.identity_server\": {\"base_url\": \"https://vector.im\"}}';
                 add_header Content-Type application/json;
                 add_header \"Access-Control-Allow-Origin\" *;
+        }
+}
+
+server {
+        listen 443 ssl;
+        server_name root.$DOMAIN;
+
+        include /etc/nginx/conf.d/ssl.conf;
+
+	add_header X-Frame-Options SAMEORIGIN;
+	add_header X-Content-Type-Options nosniff;
+	add_header X-XSS-Protection "1; mode=block";
+	add_header Content-Security-Policy "frame-ancestors 'self'";
+
+        location / {
+                proxy_pass https://localhost:8088;
+		proxy_set_header X-Forwarded-For \$remote_addr;
         }
 }
 
@@ -161,6 +184,10 @@ rm -rf /tmp/matrix-synapse-easy-install
 echo "INFO - The static Matrix page should be up already at https://$DOMAIN";
 echo "INFO - Creating your first user (you probably want this to be an admin)";
 register_new_matrix_user -c /etc/matrix-synapse/conf.d/register.yaml https://127.0.0.1:8448
+echo "INFO - start administration panel"
+echo "INFO - waiting up to 10 seconds to ensure admin panel started"
+docker run -p 8088:80 -d --restart always awesometechnologies/synapse-admin
+sleep 10; 
 echo "INFO - Test if your server federates correctly at https://federationtester.matrix.org/#$DOMAIN"
 echo "OK - Matrix should be up and running. Nothing to do here!"
 exit 0

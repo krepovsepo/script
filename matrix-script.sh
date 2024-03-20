@@ -27,7 +27,7 @@ apt update
 apt install -y nginx curl wget lsb-release apt-transport-https certbot postgresql docker.io docker-compose
 echo "INFO - Adding Matrix mirrors";
 wget -O /usr/share/keyrings/matrix-org-archive-keyring.gpg https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyring/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/matrix-org.list
+echo "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/matrix-org.list
 echo "INFO - Updating mirrors";
 apt update
 echo "INFO - Installing Matrix core";

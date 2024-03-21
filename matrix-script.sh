@@ -91,49 +91,60 @@ ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;" > /etc/nginx/con
 echo "INFO - Setting up virtual hosts in nginx";
 echo "server {
         listen 80;
+	listen [::]:80;
         server_name $DOMAIN;
         return 301 https://\$host\$request_uri;
 }
 
 server {
         listen 80;
+	listen [::]:80;
+        server_name matrix.$DOMAIN;
+        return 301 https://\$host\$request_uri;
+}
+
+server {
+        listen 80;
+	listen [::]:80;
         server_name root.$DOMAIN;
         return 301 https://\$host\$request_uri;
 }
 
 server {
-        listen 443 ssl;
+        listen 443 ssl http2;
         server_name $DOMAIN;
 
         include /etc/nginx/conf.d/ssl.conf;
 
-        location / {
-                proxy_pass https://localhost:8448;
-        }
-
-        location /_matrix {
+        location ~ ^(/|/_matrix|/_synapse/client) {
                 proxy_pass http://localhost:8008;
                 proxy_set_header X-Forwarded-For \$remote_addr;
-
-                # Nginx by default only allows file uploads up to 1M in size
-                # Increase client_max_body_size to match max_upload_size defined in homeserver.yaml
-                client_max_body_size 10M;
+		proxy_set_header X-Forwarded-Proto \$scheme;
+                proxy_set_header Host \$host;
+		client_max_body_size 100M;
+		proxy_http_version 1.1;
         }
+}
 
-        location ~ ^/.well-known/matrix/server$ {
-                return 200 '{\"m.server\": \"$DOMAIN:443\"}';
-                add_header Content-Type application/json;
-        }
+server {
+        listen 443 ssl http2;
+        server_name matrix.$DOMAIN;
 
-        location ~ ^/.well-known/matrix/client$ {
-                return 200 '{\"m.homeserver\": {\"base_url\": \"https://$DOMAIN\"},\"m.identity_server\": {\"base_url\": \"https://vector.im\"}}';
-                add_header Content-Type application/json;
-                add_header \"Access-Control-Allow-Origin\" *;
+        include /etc/nginx/conf.d/ssl.conf;
+
+        location ~ ^(/|/_matrix|/_synapse/client) {
+                proxy_pass http://localhost:8008;
+                proxy_set_header X-Forwarded-For \$remote_addr;
+		proxy_set_header X-Forwarded-Proto \$scheme;
+                proxy_set_header Host \$host;
+		client_max_body_size 100M;
+		proxy_http_version 1.1;
         }
 }
 
 server {
         listen 443 ssl;
+	listen [::]:443 ssl;
         server_name root.$DOMAIN;
 
         include /etc/nginx/conf.d/ssl.conf;
@@ -144,14 +155,28 @@ server {
 	add_header Content-Security-Policy \"frame-ancestors 'self'\";
 
         location / {
-                proxy_pass https://localhost:8088;
+                proxy_pass http://localhost:8088;
 		proxy_set_header X-Forwarded-For \$remote_addr;
         }
 }
 
 server {
-        listen 8448 ssl;
+        listen 8448 ssl http2;
+	listen [::]:8448 ssl http2;
         server_name $DOMAIN;
+
+        include /etc/nginx/conf.d/ssl.conf;
+
+        location / {
+                proxy_pass http://localhost:8008;
+                proxy_set_header X-Forwarded-For \$remote_addr;
+        }
+}
+
+server {
+        listen 8448 ssl http2;
+	listen [::]:8448 ssl http2;
+        server_name matrix.$DOMAIN;
 
         include /etc/nginx/conf.d/ssl.conf;
 
@@ -183,7 +208,7 @@ crontab /tmp/matrix-synapse-easy-install/cron
 rm -rf /tmp/matrix-synapse-easy-install
 echo "INFO - The static Matrix page should be up already at https://$DOMAIN";
 echo "INFO - Creating your first user (you probably want this to be an admin)";
-register_new_matrix_user -c /etc/matrix-synapse/conf.d/register.yaml https://127.0.0.1:8448
+register_new_matrix_user -c /etc/matrix-synapse/conf.d/register.yaml http://localhost:8008
 echo "INFO - start administration panel"
 echo "INFO - waiting up to 10 seconds to ensure admin panel started"
 docker run -p 8088:80 -d --restart always awesometechnologies/synapse-admin

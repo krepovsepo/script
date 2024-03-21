@@ -59,6 +59,12 @@ echo "database:
     host: localhost
     cp_min: 5
     cp_max: 10" > /etc/matrix-synapse/conf.d/database.yaml
+echo "server_notices:
+  system_mxid_localpart: server
+  system_mxid_display_name: \"Important information!!\"
+  room_name: \"Important information!!\"
+  room_topic: \"Room used for important information\"
+  auto_join: true" > /etc/matrix-synapse/conf.d/notice.yaml
 echo "registration_shared_secret: $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)" > /etc/matrix-synapse/conf.d/register.yaml
 echo "enable_registration: true" >> /etc/matrix-synapse/conf.d/register.yaml
 echo "enable_registration_without_verification: true" >> /etc/matrix-synapse/conf.d/register.yaml
